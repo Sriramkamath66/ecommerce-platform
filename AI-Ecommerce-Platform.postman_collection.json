@@ -1,0 +1,1211 @@
+{
+  "info": {
+    "name": "AI E-Commerce Platform",
+    "_postman_id": "ai-ecommerce-platform-v1",
+    "description": "Complete API collection for all 9 microservices.\n\nQuick start:\n1. Run '01 Auth > Login' — test script auto-sets {{accessToken}}\n2. Run '04 Categories > Create Category' — sets {{categoryId}}\n3. Run '03 Products > Create Product' — sets {{productId}}\n4. Run '07 Inventory > Set Inventory' — adds stock\n5. Run '05 Cart > Add Item' then 'Checkout' — sets {{orderId}}\n6. Run '08 Payments > Initiate Payment' then 'Confirm' — completes the flow\n\nVariables auto-set by test scripts:\n{{accessToken}}, {{refreshToken}}, {{userId}}, {{productId}}, {{categoryId}}, {{orderId}}, {{paymentId}}, {{sessionId}}",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "userServiceUrl",           "value": "http://localhost:8001", "type": "string" },
+    { "key": "productServiceUrl",         "value": "http://localhost:8002", "type": "string" },
+    { "key": "cartServiceUrl",            "value": "http://localhost:8003", "type": "string" },
+    { "key": "orderServiceUrl",           "value": "http://localhost:8004", "type": "string" },
+    { "key": "inventoryServiceUrl",       "value": "http://localhost:8005", "type": "string" },
+    { "key": "paymentServiceUrl",         "value": "http://localhost:8006", "type": "string" },
+    { "key": "notificationServiceUrl",    "value": "http://localhost:8007", "type": "string" },
+    { "key": "recommendationServiceUrl",  "value": "http://localhost:8008", "type": "string" },
+    { "key": "aiAssistantServiceUrl",     "value": "http://localhost:8009", "type": "string" },
+    { "key": "gatewayUrl",               "value": "http://localhost:8000", "type": "string" },
+    { "key": "accessToken",  "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId",       "value": "", "type": "string" },
+    { "key": "productId",    "value": "", "type": "string" },
+    { "key": "categoryId",   "value": "", "type": "string" },
+    { "key": "orderId",      "value": "", "type": "string" },
+    { "key": "paymentId",    "value": "", "type": "string" },
+    { "key": "notificationId", "value": "", "type": "string" },
+    { "key": "sessionId",    "value": "", "type": "string" },
+    { "key": "resetToken",   "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01 Auth",
+      "description": "Public auth endpoints — no token required.",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', json.id);",
+                  "    console.log('userId set:', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test1234!\",\n  \"full_name\": \"Test User\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/register",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Create a new user account. Returns user object; sets {{userId}}."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', json.access_token);",
+                  "    pm.collectionVariables.set('refreshToken', json.refresh_token);",
+                  "    console.log('Tokens set. accessToken:', json.access_token.substring(0,30) + '...');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test1234!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/login",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate and receive JWT pair. Sets {{accessToken}} and {{refreshToken}} automatically."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', json.access_token);",
+                  "    pm.collectionVariables.set('refreshToken', json.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/refresh",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Rotate refresh token. Updates {{accessToken}} and {{refreshToken}}."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/logout",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revoke the refresh token (blacklists it in Redis)."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/forgot-password",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Request a password reset email. Always returns 200 to prevent email enumeration."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"new_password\": \"NewPass1234!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/reset-password",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Consume a reset token and set a new password."
+          }
+        },
+        {
+          "name": "Get Public Key",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/auth/public-key",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["auth", "public-key"]
+            },
+            "description": "Returns the RS256 public key used by other services to verify JWTs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Users",
+      "description": "User profile management. All endpoints require a valid JWT.",
+      "item": [
+        {
+          "name": "Get My Account",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/users/me",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Return the authenticated user's account details."
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/users/me/profile",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["users", "me", "profile"]
+            },
+            "description": "Return full_name, phone, and address fields."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Updated Name\",\n  \"phone\": \"+1-555-0100\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{userServiceUrl}}/users/me/profile",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["users", "me", "profile"]
+            },
+            "description": "Partially update the authenticated user's profile."
+          }
+        },
+        {
+          "name": "[Admin] List All Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/users/?skip=0&limit=20",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["users", ""],
+              "query": [
+                { "key": "skip",  "value": "0" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Paginated list of all users. Requires admin role."
+          }
+        },
+        {
+          "name": "[Admin] Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{userServiceUrl}}/users/{{userId}}",
+              "host": ["{{userServiceUrl}}"],
+              "path": ["users", "{{userId}}"]
+            },
+            "description": "Fetch any user by UUID. Requires admin role."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Products",
+      "description": "Product catalogue. GET endpoints are public; POST/PATCH/DELETE require vendor/admin JWT.",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{productServiceUrl}}/products/?page=1&page_size=20&is_active=true",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["products", ""],
+              "query": [
+                { "key": "page",       "value": "1" },
+                { "key": "page_size",  "value": "20" },
+                { "key": "is_active",  "value": "true" },
+                { "key": "category_id","value": "", "disabled": true },
+                { "key": "min_price",  "value": "", "disabled": true },
+                { "key": "max_price",  "value": "", "disabled": true }
+              ]
+            },
+            "description": "Paginated product list with optional filters."
+          }
+        },
+        {
+          "name": "Search Products (Semantic)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{productServiceUrl}}/products/search?q=wireless headphones&limit=10",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["products", "search"],
+              "query": [
+                { "key": "q",          "value": "wireless headphones" },
+                { "key": "limit",      "value": "10" },
+                { "key": "category_id","value": "", "disabled": true },
+                { "key": "min_price",  "value": "", "disabled": true },
+                { "key": "max_price",  "value": "", "disabled": true }
+              ]
+            },
+            "description": "Vector semantic search via Qdrant. Returns empty list if embedding API key is not configured."
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{productServiceUrl}}/products/{{productId}}",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('productId', json.id);",
+                  "    console.log('productId set:', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Noise-Cancelling Headphones\",\n  \"description\": \"Premium over-ear headphones with 30-hour battery life and active noise cancellation.\",\n  \"price\": 99.99,\n  \"compare_at_price\": 149.99,\n  \"sku\": \"WH-NC-001\",\n  \"category_id\": \"{{categoryId}}\",\n  \"tags\": [\"electronics\", \"audio\", \"wireless\"],\n  \"images\": [\n    {\n      \"url\": \"https://example.com/images/headphones.jpg\",\n      \"alt_text\": \"Wireless Headphones front view\",\n      \"is_primary\": true,\n      \"sort_order\": 0\n    }\n  ],\n  \"metadata_\": {}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{productServiceUrl}}/products/",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["products", ""]
+            },
+            "description": "Create a product (vendor/admin only). Sets {{productId}}. Embedding skipped if API key not set."
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 89.99,\n  \"description\": \"Updated: Premium over-ear headphones with 35-hour battery life.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{productServiceUrl}}/products/{{productId}}",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Partial update. Vendors may only update their own products."
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{productServiceUrl}}/products/{{productId}}",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["products", "{{productId}}"]
+            },
+            "description": "Soft-delete (sets is_active=false). Also removes from Qdrant."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Categories",
+      "description": "Product categories. GET is public; POST requires vendor/admin.",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{productServiceUrl}}/categories/",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["categories", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('categoryId', json.id);",
+                  "    console.log('categoryId set:', json.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Electronics\",\n  \"slug\": \"electronics\",\n  \"parent_id\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{productServiceUrl}}/categories/",
+              "host": ["{{productServiceUrl}}"],
+              "path": ["categories", ""]
+            },
+            "description": "Create a category (admin/vendor). Sets {{categoryId}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Cart",
+      "description": "Redis-backed cart. All endpoints require JWT.",
+      "item": [
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", ""]
+            },
+            "description": "Returns cart items with product details fetched from product-service."
+          }
+        },
+        {
+          "name": "Add Item to Cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"quantity\": 2\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/items",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", "items"]
+            }
+          }
+        },
+        {
+          "name": "Update Item Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/items/{{productId}}",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", "items", "{{productId}}"]
+            },
+            "description": "Set quantity to 0 to remove the item."
+          }
+        },
+        {
+          "name": "Remove Item from Cart",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/items/{{productId}}",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", "items", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", ""]
+            }
+          }
+        },
+        {
+          "name": "Apply Coupon",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coupon_code\": \"SAVE10\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/apply-coupon",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", "apply-coupon"]
+            }
+          }
+        },
+        {
+          "name": "Checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const oid = json.order_id || (json.order && json.order.id) || json.id;",
+                  "    if (oid) {",
+                  "        pm.collectionVariables.set('orderId', oid);",
+                  "        console.log('orderId set:', oid);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipping_address\": {\n    \"street\": \"123 Main Street\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip\": \"10001\",\n    \"country\": \"US\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{cartServiceUrl}}/cart/checkout",
+              "host": ["{{cartServiceUrl}}"],
+              "path": ["cart", "checkout"]
+            },
+            "description": "Validates stock → creates order → clears cart. Sets {{orderId}}."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Orders",
+      "description": "Order management. Customers see their own orders; admins see all.",
+      "item": [
+        {
+          "name": "List My Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{orderServiceUrl}}/orders/?page=1&page_size=20",
+              "host": ["{{orderServiceUrl}}"],
+              "path": ["orders", ""],
+              "query": [
+                { "key": "page",      "value": "1" },
+                { "key": "page_size", "value": "20" },
+                { "key": "status",    "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Order (direct)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('orderId', json.id || json.order_id);",
+                  "    console.log('orderId set:', json.id || json.order_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": \"{{productId}}\",\n      \"product_name\": \"Wireless Headphones\",\n      \"quantity\": 1,\n      \"unit_price\": 99.99,\n      \"total_price\": 99.99\n    }\n  ],\n  \"shipping_address\": {\n    \"street\": \"123 Main Street\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip\": \"10001\",\n    \"country\": \"US\"\n  },\n  \"subtotal\": 99.99,\n  \"discount\": 0.0,\n  \"total\": 99.99,\n  \"shipping_fee\": 5.99\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{orderServiceUrl}}/orders/",
+              "host": ["{{orderServiceUrl}}"],
+              "path": ["orders", ""]
+            },
+            "description": "Create order directly (bypassing cart). Sets {{orderId}}."
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{orderServiceUrl}}/orders/{{orderId}}",
+              "host": ["{{orderServiceUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Order History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{orderServiceUrl}}/orders/{{orderId}}/history",
+              "host": ["{{orderServiceUrl}}"],
+              "path": ["orders", "{{orderId}}", "history"]
+            },
+            "description": "Returns the FSM status transition log for an order."
+          }
+        },
+        {
+          "name": "[Admin] Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\",\n  \"note\": \"Order verified and confirmed\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{orderServiceUrl}}/orders/{{orderId}}/status",
+              "host": ["{{orderServiceUrl}}"],
+              "path": ["orders", "{{orderId}}", "status"]
+            },
+            "description": "Valid statuses: pending → confirmed → processing → shipped → delivered | cancelled | refunded"
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{orderServiceUrl}}/orders/{{orderId}}/cancel",
+              "host": ["{{orderServiceUrl}}"],
+              "path": ["orders", "{{orderId}}", "cancel"]
+            },
+            "description": "Cancels the order and triggers inventory release via Redis event."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Inventory",
+      "description": "Stock management. Set/adjust require admin. Reserve/release are internal (no auth).",
+      "item": [
+        {
+          "name": "Get Inventory for Product",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/{{productId}}",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", "{{productId}}"]
+            },
+            "description": "Returns quantity, reserved quantity, and warehouse info."
+          }
+        },
+        {
+          "name": "[Admin] Set Inventory",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"quantity\": 100,\n  \"low_stock_threshold\": 10,\n  \"warehouse_id\": \"main\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", ""]
+            },
+            "description": "Set initial stock for a product (admin only)."
+          }
+        },
+        {
+          "name": "[Admin] Adjust Quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_delta\": 50,\n  \"note\": \"Restock from supplier\",\n  \"reference_id\": null\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/{{productId}}",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", "{{productId}}"]
+            },
+            "description": "Add or subtract stock. Use negative delta to decrease."
+          }
+        },
+        {
+          "name": "Reserve Stock (internal)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1,\n  \"order_id\": \"{{orderId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/{{productId}}/reserve",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", "{{productId}}", "reserve"]
+            },
+            "description": "Reserve stock during checkout. Normally called by cart-service."
+          }
+        },
+        {
+          "name": "Release Reservation (internal)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1,\n  \"order_id\": \"{{orderId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/{{productId}}/release",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", "{{productId}}", "release"]
+            },
+            "description": "Release reserved stock on order cancellation. Normally called by order-service."
+          }
+        },
+        {
+          "name": "Get Stock Movements",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/{{productId}}/movements",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", "{{productId}}", "movements"]
+            },
+            "description": "Audit log of all stock changes for a product."
+          }
+        },
+        {
+          "name": "[Admin] Low Stock Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{inventoryServiceUrl}}/inventory/low-stock",
+              "host": ["{{inventoryServiceUrl}}"],
+              "path": ["inventory", "low-stock"]
+            },
+            "description": "Returns all products where quantity is below their low_stock_threshold."
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Payments",
+      "description": "Mock Stripe payment flow. JWT required except webhook.",
+      "item": [
+        {
+          "name": "Initiate Payment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    const pid = json.id || json.payment_id;",
+                  "    if (pid) {",
+                  "        pm.collectionVariables.set('paymentId', pid);",
+                  "        console.log('paymentId set:', pid);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{orderId}}\",\n  \"amount\": 99.99,\n  \"method\": \"card\",\n  \"currency\": \"USD\",\n  \"metadata\": {\n    \"card_last4\": \"4242\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{paymentServiceUrl}}/payments/",
+              "host": ["{{paymentServiceUrl}}"],
+              "path": ["payments", ""]
+            },
+            "description": "Creates a payment intent (mock Stripe). Sets {{paymentId}}."
+          }
+        },
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{paymentServiceUrl}}/payments/",
+              "host": ["{{paymentServiceUrl}}"],
+              "path": ["payments", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{paymentServiceUrl}}/payments/{{paymentId}}",
+              "host": ["{{paymentServiceUrl}}"],
+              "path": ["payments", "{{paymentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Payment (dev/test)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{paymentServiceUrl}}/payments/{{paymentId}}/confirm",
+              "host": ["{{paymentServiceUrl}}"],
+              "path": ["payments", "{{paymentId}}", "confirm"]
+            },
+            "description": "Simulates payment confirmation. Publishes payment.completed event → order transitions to 'confirmed'."
+          }
+        },
+        {
+          "name": "Stripe Webhook (no auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_test_123456\",\n      \"status\": \"succeeded\",\n      \"amount\": 9999,\n      \"metadata\": {\n        \"order_id\": \"{{orderId}}\"\n      }\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{paymentServiceUrl}}/payments/webhook",
+              "host": ["{{paymentServiceUrl}}"],
+              "path": ["payments", "webhook"]
+            },
+            "description": "Stripe-style webhook. No auth required."
+          }
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 99.99,\n  \"reason\": \"Customer requested refund\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{paymentServiceUrl}}/payments/{{paymentId}}/refund",
+              "host": ["{{paymentServiceUrl}}"],
+              "path": ["payments", "{{paymentId}}", "refund"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Notifications",
+      "description": "In-app notification history. Populated by Redis event consumers.",
+      "item": [
+        {
+          "name": "List Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.notifications || [];",
+                  "    if (items.length > 0) {",
+                  "        pm.collectionVariables.set('notificationId', items[0].id);",
+                  "        console.log('notificationId set:', items[0].id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/?page=1&page_size=20&unread_only=false",
+              "host": ["{{notificationServiceUrl}}"],
+              "path": ["notifications", ""],
+              "query": [
+                { "key": "page",        "value": "1" },
+                { "key": "page_size",   "value": "20" },
+                { "key": "unread_only", "value": "false" }
+              ]
+            },
+            "description": "Returns paginated notification log for the current user. Sets {{notificationId}} from first result."
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/unread-count",
+              "host": ["{{notificationServiceUrl}}"],
+              "path": ["notifications", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/{{notificationId}}/read",
+              "host": ["{{notificationServiceUrl}}"],
+              "path": ["notifications", "{{notificationId}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{notificationServiceUrl}}/notifications/read-all",
+              "host": ["{{notificationServiceUrl}}"],
+              "path": ["notifications", "read-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Recommendations",
+      "description": "Vector-similarity product recommendations. Similar products is public.",
+      "item": [
+        {
+          "name": "Get User Recommendations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{recommendationServiceUrl}}/recommendations/user/{{userId}}?limit=10",
+              "host": ["{{recommendationServiceUrl}}"],
+              "path": ["recommendations", "user", "{{userId}}"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "Personalized recommendations based on purchase history. Users can only fetch their own."
+          }
+        },
+        {
+          "name": "Get Similar Products",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{recommendationServiceUrl}}/recommendations/product/{{productId}}/similar?limit=10",
+              "host": ["{{recommendationServiceUrl}}"],
+              "path": ["recommendations", "product", "{{productId}}", "similar"],
+              "query": [{ "key": "limit", "value": "10" }]
+            },
+            "description": "Returns products with nearest embedding vectors. Public endpoint."
+          }
+        },
+        {
+          "name": "Track Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"{{productId}}\",\n  \"event_type\": \"view\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{recommendationServiceUrl}}/recommendations/track",
+              "host": ["{{recommendationServiceUrl}}"],
+              "path": ["recommendations", "track"]
+            },
+            "description": "Track a user interaction. event_type: view | click | purchase"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 AI Assistant",
+      "description": "RAG chatbot with SSE streaming. Kong route has no JWT plugin — direct auth via service.",
+      "item": [
+        {
+          "name": "Create Chat Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('sessionId', json.session_id);",
+                  "    console.log('sessionId set:', json.session_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{aiAssistantServiceUrl}}/chat/sessions",
+              "host": ["{{aiAssistantServiceUrl}}"],
+              "path": ["chat", "sessions"]
+            },
+            "description": "Start a new chat session. Sets {{sessionId}}."
+          }
+        },
+        {
+          "name": "Send Message (SSE stream)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"What are your best wireless headphones under $100?\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{aiAssistantServiceUrl}}/chat/sessions/{{sessionId}}/messages",
+              "host": ["{{aiAssistantServiceUrl}}"],
+              "path": ["chat", "sessions", "{{sessionId}}", "messages"]
+            },
+            "description": "Send a message. Returns SSE stream (text/event-stream). Each event is JSON: {type, text} or {type: message_stop}. Returns error event if ANTHROPIC_API_KEY not set."
+          }
+        },
+        {
+          "name": "Get Chat History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{aiAssistantServiceUrl}}/chat/sessions/{{sessionId}}/history",
+              "host": ["{{aiAssistantServiceUrl}}"],
+              "path": ["chat", "sessions", "{{sessionId}}", "history"]
+            }
+          }
+        },
+        {
+          "name": "Delete Chat Session",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{aiAssistantServiceUrl}}/chat/sessions/{{sessionId}}",
+              "host": ["{{aiAssistantServiceUrl}}"],
+              "path": ["chat", "sessions", "{{sessionId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Health Checks",
+      "description": "Liveness probes for all 9 services. No auth required.",
+      "item": [
+        {
+          "name": "User Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{userServiceUrl}}/health", "host": ["{{userServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Product Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{productServiceUrl}}/health", "host": ["{{productServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Cart Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{cartServiceUrl}}/health", "host": ["{{cartServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Order Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{orderServiceUrl}}/health", "host": ["{{orderServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Inventory Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{inventoryServiceUrl}}/health", "host": ["{{inventoryServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Payment Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{paymentServiceUrl}}/health", "host": ["{{paymentServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Notification Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{notificationServiceUrl}}/health", "host": ["{{notificationServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "Recommendation Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{recommendationServiceUrl}}/health", "host": ["{{recommendationServiceUrl}}"], "path": ["health"] }
+          }
+        },
+        {
+          "name": "AI Assistant Service",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{aiAssistantServiceUrl}}/health", "host": ["{{aiAssistantServiceUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    }
+  ]
+}

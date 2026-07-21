@@ -4,7 +4,7 @@ import uuid
 from decimal import Decimal
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -179,7 +179,7 @@ async def delete_product(
     qdrant_svc: Annotated[QdrantService, Depends(get_qdrant_service)],
     redis: Annotated[Redis, Depends(get_redis)],
     current_user: Annotated[CurrentUser, Depends(require_vendor_or_admin)],
-) -> None:
+) -> Response:
     if not current_user.is_admin:
         existing = await product_service.get_product(db=db, product_id=product_id)
         if existing is None:
@@ -204,3 +204,4 @@ async def delete_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Product {product_id} not found.",
         )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

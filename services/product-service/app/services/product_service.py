@@ -25,10 +25,6 @@ from app.services.qdrant_service import QdrantService
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
-
 def _build_product_response(product: Product) -> ProductResponse:
     category_name: Optional[str] = None
     if product.category is not None:
@@ -37,7 +33,6 @@ def _build_product_response(product: Product) -> ProductResponse:
 
 
 def _product_payload(product: Product) -> dict:
-    """Build the Qdrant payload stored alongside the vector."""
     return {
         "name": product.name,
         "sku": product.sku,
@@ -55,13 +50,9 @@ async def _publish_event(redis: Redis, event: str, payload: dict) -> None:
             f"product.{event}",
             json.dumps(payload, default=str),
         )
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:
         logger.warning("Failed to publish event product.%s: %s", event, exc)
 
-
-# ---------------------------------------------------------------------------
-# Product CRUD
-# ---------------------------------------------------------------------------
 
 async def create_product(
     db: AsyncSession,
@@ -84,8 +75,8 @@ async def create_product(
         is_active=True,
     )
     db.add(product)
+    await db.flush()  # populate product.id before referencing it in child rows
 
-    # Add images
     for img_data in data.images:
         image = ProductImage(
             product_id=product.id,
@@ -98,7 +89,6 @@ async def create_product(
 
     await db.flush()
 
-    # Reload with relationships
     result = await db.execute(
         select(Product)
         .options(selectinload(Product.images), selectinload(Product.category))
@@ -106,14 +96,12 @@ async def create_product(
     )
     product = result.scalar_one()
 
-    # Generate embedding and push to Qdrant
     try:
         vector = await embedding_svc.embed_product(product)
         await qdrant_svc.upsert_product(product.id, vector, _product_payload(product))
     except Exception as exc:
         logger.error("Embedding/Qdrant upsert failed for product %s: %s", product.id, exc)
 
-    # Publish event
     await _publish_event(redis, "created", {"product_id": str(product.id), "sku": product.sku})
 
     return _build_product_response(product)
@@ -201,13 +189,10 @@ async def update_product(
             needs_reembedding = True
         setattr(product, field, value)
 
-    # Handle image replacement if provided
     if data.images is not None:
-        # Remove existing images
         for img in list(product.images):
             await db.delete(img)
         await db.flush()
-        # Add new images
         for img_data in data.images:
             image = ProductImage(
                 product_id=product.id,
@@ -220,7 +205,6 @@ async def update_product(
 
     await db.flush()
 
-    # Reload
     result = await db.execute(
         select(Product)
         .options(selectinload(Product.images), selectinload(Product.category))
@@ -228,20 +212,11 @@ async def update_product(
     )
     product = result.scalar_one()
 
-    # Re-embed only when semantically relevant fields changed
-    if needs_reembedding:
-        try:
-            vector = await embedding_svc.embed_product(product)
-            await qdrant_svc.upsert_product(product.id, vector, _product_payload(product))
-        except Exception as exc:
-            logger.error("Re-embedding failed for product %s: %s", product.id, exc)
-    else:
-        # Still update the Qdrant payload (price, active state, etc. may have changed)
-        try:
-            vector = await embedding_svc.embed_product(product)
-            await qdrant_svc.upsert_product(product.id, vector, _product_payload(product))
-        except Exception as exc:
-            logger.error("Qdrant payload update failed for product %s: %s", product.id, exc)
+    try:
+        vector = await embedding_svc.embed_product(product)
+        await qdrant_svc.upsert_product(product.id, vector, _product_payload(product))
+    except Exception as exc:
+        logger.error("Re-embedding failed for product %s: %s", product.id, exc)
 
     await _publish_event(redis, "updated", {"product_id": str(product.id), "sku": product.sku})
 
@@ -261,11 +236,9 @@ async def delete_product(
     if product is None:
         return False
 
-    # Soft delete
     product.is_active = False
     await db.flush()
 
-    # Remove from Qdrant so it no longer appears in searches
     try:
         await qdrant_svc.delete_product(product_id)
     except Exception as exc:
@@ -274,10 +247,6 @@ async def delete_product(
     await _publish_event(redis, "deleted", {"product_id": str(product_id)})
     return True
 
-
-# ---------------------------------------------------------------------------
-# Semantic search
-# ---------------------------------------------------------------------------
 
 async def search_products(
     db: AsyncSession,
@@ -294,7 +263,7 @@ async def search_products(
     except Exception as exc:
         logger.warning(
             "Embedding unavailable (%s) — semantic search returning empty results. "
-            "Set VOYAGE_API_KEY (or a Gemini key) to enable.",
+            "Set VOYAGE_API_KEY to enable.",
             exc,
         )
         return []
@@ -312,7 +281,6 @@ async def search_products(
     if not hits:
         return []
 
-    # Fetch full product data from DB for matched IDs
     product_ids = [uuid.UUID(str(h["id"])) for h in hits]
     db_result = await db.execute(
         select(Product)

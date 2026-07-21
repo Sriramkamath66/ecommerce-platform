@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -89,7 +89,7 @@ async def delete_category(
     category_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     _admin: Annotated[CurrentUser, Depends(require_admin)],
-) -> None:
+) -> Response:
     deleted = await category_service.delete_category(
         db=db, category_id=category_id
     )
@@ -98,3 +98,4 @@ async def delete_category(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Category {category_id} not found.",
         )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
