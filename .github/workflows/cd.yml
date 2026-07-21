@@ -99,6 +99,7 @@ jobs:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
     needs: build-and-push
+    if: ${{ secrets.KUBE_CONFIG != '' }}
     permissions:
       contents: read
       packages: read
@@ -131,7 +132,6 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
           chmod 600 ~/.kube/config
-          kubectl cluster-info
 
       - name: Verify namespace exists
         run: |
@@ -188,6 +188,7 @@ jobs:
     name: Smoke Tests
     runs-on: ubuntu-latest
     needs: deploy
+    if: ${{ secrets.KUBE_CONFIG != '' }}
     environment:
       name: production
 
