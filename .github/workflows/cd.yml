@@ -142,6 +142,38 @@ jobs:
           helm lint ./infrastructure/helm/ai-ecommerce \
             --values ./infrastructure/helm/ai-ecommerce/values.yaml
 
+      - name: Pre-pull backing service images into Kind nodes
+        # Kind nodes run their own containerd, isolated from the host Docker daemon.
+        # Pods inside Kind pull directly from Docker Hub and get rate-limited.
+        # Fix: pull on the host (which has Docker Hub cache), then kind load to
+        # inject images directly into the Kind node — no registry pull at pod start.
+        run: |
+          IMAGES=$(helm template ai-ecommerce \
+            ./infrastructure/helm/ai-ecommerce \
+            --namespace ${{ env.NAMESPACE }} \
+            --values ./infrastructure/helm/ai-ecommerce/values.yaml \
+            --set global.image.tag=latest \
+            --set secrets.postgresPassword=ci \
+            --set secrets.anthropicApiKey=x \
+            --set secrets.voyageApiKey=x \
+            --set secrets.jwtPrivateKey=x \
+            --set secrets.jwtPublicKey=x \
+            | grep -E '^\s+image:' \
+            | awk '{print $2}' \
+            | tr -d '"' \
+            | grep 'bitnami' \
+            | sort -u)
+
+          echo "Bitnami images to pre-load:"
+          printf '  %s\n' $IMAGES
+
+          for img in $IMAGES; do
+            echo ">>> docker pull $img"
+            docker pull "$img"
+            echo ">>> kind load $img"
+            kind load docker-image "$img" --name ci-ecommerce
+          done
+
       - name: Helm template (local render — no cluster touch)
         # helm template is purely local; unlike --dry-run it does NOT create the
         # namespace, so it cannot pollute cluster state before the real install.
