@@ -142,12 +142,20 @@ jobs:
           helm lint ./infrastructure/helm/ai-ecommerce \
             --values ./infrastructure/helm/ai-ecommerce/values.yaml
 
+      - name: Create namespace
+        # kubectl apply is idempotent — safe to run before both helm steps.
+        # Helm's --create-namespace has a bug where it runs even during --dry-run,
+        # causing "namespace already exists" when the real install step also tries
+        # to create it. Pre-creating with kubectl apply avoids this entirely.
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Helm dry-run (full template render)
         run: |
           helm upgrade --install ai-ecommerce \
             ./infrastructure/helm/ai-ecommerce \
             --namespace ${{ env.NAMESPACE }} \
-            --create-namespace \
             --dry-run \
             --values ./infrastructure/helm/ai-ecommerce/values.yaml \
             --set global.image.tag=${{ github.sha }} \
@@ -164,7 +172,6 @@ jobs:
           helm upgrade --install ai-ecommerce \
             ./infrastructure/helm/ai-ecommerce \
             --namespace ${{ env.NAMESPACE }} \
-            --create-namespace \
             --values ./infrastructure/helm/ai-ecommerce/values.yaml \
             --set global.image.tag=${{ github.sha }} \
             --set secrets.postgresPassword=ci-test \
