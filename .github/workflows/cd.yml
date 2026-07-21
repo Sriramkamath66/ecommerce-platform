@@ -206,8 +206,10 @@ jobs:
           kubectl get all -n ${{ env.NAMESPACE }}
           kubectl describe pods -n ${{ env.NAMESPACE }}
 
-  # ── Production deploy — provider-agnostic, gated on KUBE_CONFIG secret ────────
-  # Set KUBE_CONFIG in GitHub repo Secrets (base64-encoded kubeconfig) to enable.
+  # ── Production deploy — provider-agnostic, gated on a repo variable ─────────
+  # To enable: go to repo Settings → Variables → New repository variable
+  #   Name:  PRODUCTION_DEPLOY   Value: true
+  # Also add repo Secret KUBE_CONFIG (base64-encoded kubeconfig for any cluster).
   # Works with any Kubernetes cluster: GKE, AKS, DOKS, k3s — no AWS needed.
   deploy-production:
     name: Deploy to Production
@@ -215,7 +217,7 @@ jobs:
     needs:
       - build-and-push
       - validate-kind
-    if: ${{ secrets.KUBE_CONFIG != '' }}
+    if: vars.PRODUCTION_DEPLOY == 'true'
     permissions:
       contents: read
       packages: read
@@ -301,7 +303,7 @@ jobs:
     name: Smoke Tests
     runs-on: ubuntu-latest
     needs: deploy-production
-    if: ${{ secrets.KUBE_CONFIG != '' }}
+    if: vars.PRODUCTION_DEPLOY == 'true'
 
     steps:
       - name: Checkout repository
