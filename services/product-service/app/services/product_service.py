@@ -289,7 +289,15 @@ async def search_products(
     min_price: Optional[Decimal] = None,
     max_price: Optional[Decimal] = None,
 ) -> list[SearchResult]:
-    query_vector = await embedding_svc.embed_text(query)
+    try:
+        query_vector = await embedding_svc.embed_text(query)
+    except Exception as exc:
+        logger.warning(
+            "Embedding unavailable (%s) — semantic search returning empty results. "
+            "Set VOYAGE_API_KEY (or a Gemini key) to enable.",
+            exc,
+        )
+        return []
 
     filters: dict = {}
     if category_id is not None:

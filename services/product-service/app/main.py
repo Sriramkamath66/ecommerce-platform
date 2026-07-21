@@ -49,7 +49,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     set_redis(redis)
     logger.info("Redis connected: %s", settings.REDIS_URL)
 
-    # 3. EmbeddingService
+    # 3. EmbeddingService (works without a key; semantic search is disabled until one is set)
+    if not settings.VOYAGE_API_KEY:
+        logger.warning(
+            "VOYAGE_API_KEY is not set — product embedding and semantic search are disabled. "
+            "Set VOYAGE_API_KEY in .env to enable."
+        )
     embedding_svc = EmbeddingService(
         api_key=settings.VOYAGE_API_KEY,
         model=settings.EMBEDDING_MODEL,

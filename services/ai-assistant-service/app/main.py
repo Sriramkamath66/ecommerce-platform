@@ -26,6 +26,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialise and tear down all service dependencies."""
     logger.info("Starting AI Assistant Service — initialising clients…")
 
+    if not settings.ANTHROPIC_API_KEY:
+        logger.warning(
+            "ANTHROPIC_API_KEY is not set — AI chat will return errors until a key is configured."
+        )
+    if not settings.VOYAGE_API_KEY:
+        logger.warning(
+            "VOYAGE_API_KEY is not set — RAG product context will be unavailable for the AI assistant."
+        )
+
     # Redis
     redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
 

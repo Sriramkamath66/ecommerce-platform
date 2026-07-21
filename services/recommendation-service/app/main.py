@@ -27,6 +27,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     logger.info("Starting Recommendation Service — initialising clients …")
 
+    if not settings.ANTHROPIC_API_KEY:
+        logger.warning(
+            "ANTHROPIC_API_KEY is not set — recommendations will be returned unranked (no LLM reranking)."
+        )
+    if not settings.VOYAGE_API_KEY:
+        logger.warning(
+            "VOYAGE_API_KEY is not set — this service uses Qdrant-stored vectors and will work normally."
+        )
+
     # Redis
     redis_client = aioredis.from_url(
         settings.REDIS_URL,
