@@ -103,12 +103,12 @@ jobs:
       - name: Output image digest
         run: echo "Image digest ${{ steps.push.outputs.digest }} pushed for ${{ matrix.service }}"
 
-  # ── Helm chart validation on a temporary Kind cluster ────────────────────────
-  # Runs in parallel with build-and-push — no image pull needed (replicaCount=0).
-  # Validates: chart renders correctly, postgres + redis backing services start.
-  # No secrets or cloud credentials required.
-  validate-kind:
-    name: Validate Helm Chart (Kind)
+  # ── Helm chart validation (lint + render only, no cluster required) ──────────
+  # Runs in parallel with build-and-push. No Docker Hub pulls, no Kind cluster,
+  # no image-tag churn. helm lint catches structural errors; helm template catches
+  # rendering errors. Actual cluster behaviour is tested by deploy-production.
+  validate-chart:
+    name: Validate Helm Chart
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -116,12 +116,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Create Kind cluster
-        uses: helm/kind-action@v1.10.0
-        with:
-          cluster_name: ci-ecommerce
-          wait: 120s
 
       - name: Install Helm
         shell: bash
@@ -142,41 +136,10 @@ jobs:
           helm lint ./infrastructure/helm/ai-ecommerce \
             --values ./infrastructure/helm/ai-ecommerce/values.yaml
 
-      - name: Pre-pull backing service images into Kind nodes
-        # Kind nodes run their own containerd, isolated from the host Docker daemon.
-        # Pods inside Kind pull directly from Docker Hub and get rate-limited.
-        # Fix: pull on the host (which has Docker Hub cache), then kind load to
-        # inject images directly into the Kind node — no registry pull at pod start.
-        run: |
-          IMAGES=$(helm template ai-ecommerce \
-            ./infrastructure/helm/ai-ecommerce \
-            --namespace ${{ env.NAMESPACE }} \
-            --values ./infrastructure/helm/ai-ecommerce/values.yaml \
-            --set global.image.tag=latest \
-            --set secrets.postgresPassword=ci \
-            --set secrets.anthropicApiKey=x \
-            --set secrets.voyageApiKey=x \
-            --set secrets.jwtPrivateKey=x \
-            --set secrets.jwtPublicKey=x \
-            | grep -E '^\s+image:' \
-            | awk '{print $2}' \
-            | tr -d '"' \
-            | grep 'bitnami' \
-            | sort -u)
-
-          echo "Bitnami images to pre-load:"
-          printf '  %s\n' $IMAGES
-
-          for img in $IMAGES; do
-            echo ">>> docker pull $img"
-            docker pull "$img"
-            echo ">>> kind load $img"
-            kind load docker-image "$img" --name ci-ecommerce
-          done
-
-      - name: Helm template (local render — no cluster touch)
-        # helm template is purely local; unlike --dry-run it does NOT create the
-        # namespace, so it cannot pollute cluster state before the real install.
+      - name: Helm template (full render — all 9 services + subcharts)
+        # helm template is purely local: no cluster, no Docker Hub, no image pulls.
+        # It catches missing keys, bad references, and malformed YAML in every
+        # template file across all 9 services and the bitnami subcharts.
         run: |
           helm template ai-ecommerce \
             ./infrastructure/helm/ai-ecommerce \
@@ -191,67 +154,6 @@ jobs:
             > /dev/null
           echo "PASS: chart renders without errors"
 
-      - name: Install backing services only (postgres + redis)
-        # All 9 app services are at replicaCount=0 — only postgres + redis deploy.
-        # persistence.enabled=false uses emptyDir instead of PVCs: no storage
-        # provisioner needed and pods start in seconds instead of minutes in Kind.
-        run: |
-          helm upgrade --install ai-ecommerce \
-            ./infrastructure/helm/ai-ecommerce \
-            --namespace ${{ env.NAMESPACE }} \
-            --create-namespace \
-            --values ./infrastructure/helm/ai-ecommerce/values.yaml \
-            --set global.image.tag=${{ github.sha }} \
-            --set secrets.postgresPassword=ci-test \
-            --set secrets.anthropicApiKey=sk-placeholder \
-            --set secrets.voyageApiKey=pa-placeholder \
-            --set secrets.jwtPrivateKey=placeholder \
-            --set secrets.jwtPublicKey=placeholder \
-            --set services.userService.replicaCount=0 \
-            --set services.productService.replicaCount=0 \
-            --set services.cartService.replicaCount=0 \
-            --set services.orderService.replicaCount=0 \
-            --set services.inventoryService.replicaCount=0 \
-            --set services.paymentService.replicaCount=0 \
-            --set services.notificationService.replicaCount=0 \
-            --set services.recommendationService.replicaCount=0 \
-            --set services.aiAssistantService.replicaCount=0 \
-            --set postgresql.primary.persistence.enabled=false \
-            --set redis.master.persistence.enabled=false \
-            --set redis.replica.persistence.enabled=false \
-            --wait \
-            --timeout 5m &
-          HELM_PID=$!
-          # Stream pod status every 15 s while helm is waiting
-          while kill -0 $HELM_PID 2>/dev/null; do
-            echo "--- pod status ---"
-            kubectl get pods -n ${{ env.NAMESPACE }} 2>/dev/null || true
-            sleep 15
-          done
-          wait $HELM_PID
-
-      - name: Verify PostgreSQL is ready
-        run: |
-          kubectl wait --for=condition=ready pod \
-            -l app.kubernetes.io/name=postgresql \
-            -n ${{ env.NAMESPACE }} \
-            --timeout=120s
-          echo "PASS: PostgreSQL is ready"
-
-      - name: Verify Redis is ready
-        run: |
-          kubectl wait --for=condition=ready pod \
-            -l app.kubernetes.io/name=redis \
-            -n ${{ env.NAMESPACE }} \
-            --timeout=120s
-          echo "PASS: Redis is ready"
-
-      - name: Show cluster state on failure
-        if: failure()
-        run: |
-          kubectl get all -n ${{ env.NAMESPACE }}
-          kubectl describe pods -n ${{ env.NAMESPACE }}
-
   # ── Production deploy — provider-agnostic, gated on a repo variable ─────────
   # To enable: go to repo Settings → Variables → New repository variable
   #   Name:  PRODUCTION_DEPLOY   Value: true
@@ -262,7 +164,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-and-push
-      - validate-kind
+      - validate-chart
     if: vars.PRODUCTION_DEPLOY == 'true'
     permissions:
       contents: read
