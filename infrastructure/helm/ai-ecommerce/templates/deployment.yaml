@@ -1,0 +1,98 @@
+{{- if .Values.services.userService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.userService "name" "user-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.userService "name" "user-service") }}
+{{- if .Values.services.userService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.userService "name" "user-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.productService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.productService "name" "product-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.productService "name" "product-service") }}
+{{- if .Values.services.productService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.productService "name" "product-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.cartService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.cartService "name" "cart-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.cartService "name" "cart-service") }}
+{{- if .Values.services.cartService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.cartService "name" "cart-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.orderService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.orderService "name" "order-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.orderService "name" "order-service") }}
+{{- if .Values.services.orderService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.orderService "name" "order-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.inventoryService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.inventoryService "name" "inventory-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.inventoryService "name" "inventory-service") }}
+{{- if .Values.services.inventoryService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.inventoryService "name" "inventory-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.paymentService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.paymentService "name" "payment-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.paymentService "name" "payment-service") }}
+{{- if .Values.services.paymentService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.paymentService "name" "payment-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.notificationService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.notificationService "name" "notification-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.notificationService "name" "notification-service") }}
+{{- if .Values.services.notificationService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.notificationService "name" "notification-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.recommendationService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.recommendationService "name" "recommendation-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.recommendationService "name" "recommendation-service") }}
+{{- if .Values.services.recommendationService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.recommendationService "name" "recommendation-service") }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.services.aiAssistantService.enabled }}
+---
+{{ include "ai-ecommerce.serviceDeployment" (dict "root" . "svc" .Values.services.aiAssistantService "name" "ai-assistant-service") }}
+---
+{{ include "ai-ecommerce.serviceService" (dict "root" . "svc" .Values.services.aiAssistantService "name" "ai-assistant-service") }}
+{{- if .Values.services.aiAssistantService.autoscaling.enabled }}
+---
+{{ include "ai-ecommerce.serviceHPA" (dict "root" . "svc" .Values.services.aiAssistantService "name" "ai-assistant-service") }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,115 @@
+groups:
+  - name: ai-ecommerce.rules
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum by (job) (
+              rate(http_requests_total{status_code=~"5.."}[5m])
+            )
+            /
+            sum by (job) (
+              rate(http_requests_total[5m])
+            )
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: >
+            Service {{ $labels.job }} has an error rate of
+            {{ $value | humanizePercentage }} over the last 5 minutes,
+            which exceeds the 5% threshold.
+          runbook_url: "https://wiki.example.com/runbooks/high-error-rate"
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (job, le) (
+              rate(http_request_duration_seconds_bucket[5m])
+            )
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High p99 latency on {{ $labels.job }}"
+          description: >
+            Service {{ $labels.job }} has a p99 latency of
+            {{ $value | humanizeDuration }} over the last 5 minutes,
+            which exceeds the 2 second threshold.
+          runbook_url: "https://wiki.example.com/runbooks/high-latency"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: >
+            Service {{ $labels.job }} on instance {{ $labels.instance }}
+            has been unreachable for more than 1 minute.
+          runbook_url: "https://wiki.example.com/runbooks/service-down"
+
+      - alert: HighMemoryUsage
+        expr: |
+          container_memory_usage_bytes{
+            namespace="ai-ecommerce",
+            container!=""
+          } > 536870912
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage for {{ $labels.container }}"
+          description: >
+            Container {{ $labels.container }} in pod {{ $labels.pod }}
+            has been using {{ $value | humanize1024 }}B of memory for
+            more than 10 minutes, which exceeds the 512Mi threshold.
+          runbook_url: "https://wiki.example.com/runbooks/high-memory"
+
+  - name: ai-ecommerce.slos
+    rules:
+      - alert: ErrorBudgetBurnRateHigh
+        expr: |
+          (
+            sum by (job) (rate(http_requests_total{status_code=~"5.."}[1h]))
+            /
+            sum by (job) (rate(http_requests_total[1h]))
+          ) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Error budget burn rate high for {{ $labels.job }}"
+          description: >
+            Service {{ $labels.job }} is burning its error budget at
+            {{ $value | humanizePercentage }} over the last hour.
+
+      - alert: RequestRateAnomaly
+        expr: |
+          abs(
+            sum by (job) (rate(http_requests_total[5m]))
+            -
+            sum by (job) (rate(http_requests_total[1h] offset 1d))
+          )
+          /
+          sum by (job) (rate(http_requests_total[1h] offset 1d)) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Unusual request rate for {{ $labels.job }}"
+          description: >
+            Service {{ $labels.job }} has an unusual request rate compared
+            to the same time yesterday. Current deviation: {{ $value | humanizePercentage }}.

@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "ai-ecommerce.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  DEBUG: "false"
+
+  REDIS_URL: {{ .Values.config.redisUrl | quote }}
+  REDIS_CACHE_TTL: "3600"
+
+  QDRANT_URL: {{ .Values.config.qdrantUrl | quote }}
+  QDRANT_COLLECTION_PRODUCTS: "products"
+  QDRANT_COLLECTION_USERS: "users"
+
+  USER_SERVICE_URL: "http://user-service:{{ .Values.services.userService.port }}"
+  PRODUCT_SERVICE_URL: "http://product-service:{{ .Values.services.productService.port }}"
+  CART_SERVICE_URL: "http://cart-service:{{ .Values.services.cartService.port }}"
+  ORDER_SERVICE_URL: "http://order-service:{{ .Values.services.orderService.port }}"
+  INVENTORY_SERVICE_URL: "http://inventory-service:{{ .Values.services.inventoryService.port }}"
+  PAYMENT_SERVICE_URL: "http://payment-service:{{ .Values.services.paymentService.port }}"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:{{ .Values.services.notificationService.port }}"
+  RECOMMENDATION_SERVICE_URL: "http://recommendation-service:{{ .Values.services.recommendationService.port }}"
+  AI_ASSISTANT_SERVICE_URL: "http://ai-assistant-service:{{ .Values.services.aiAssistantService.port }}"
+
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "20"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+
+  POSTGRES_HOST: {{ .Values.config.postgresHost | quote }}
+  POSTGRES_PORT: {{ .Values.config.postgresPort | quote }}
+  POSTGRES_USER: {{ .Values.config.postgresUser | quote }}
+
+  SMTP_HOST: {{ .Values.config.smtpHost | quote }}
+  SMTP_PORT: {{ .Values.config.smtpPort | quote }}
+  SMTP_TLS: "true"
+  SMTP_FROM_EMAIL: {{ .Values.config.smtpFromEmail | quote }}
+
+  JWT_ALGORITHM: {{ .Values.config.jwtAlgorithm | quote }}
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.config.jwtAccessTokenExpireMinutes | quote }}
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "30"
+
+  DEFAULT_PAGE_SIZE: "20"
+  MAX_PAGE_SIZE: "100"
+
+  RECOMMENDATION_MODEL: "voyage-large-2"
+  EMBEDDING_DIMENSIONS: "1536"
+  AI_ASSISTANT_MAX_TOKENS: "4096"

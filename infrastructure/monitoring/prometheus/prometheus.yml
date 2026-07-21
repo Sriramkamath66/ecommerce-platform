@@ -1,0 +1,103 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    cluster: ai-ecommerce
+    environment: production
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+      scheme: http
+      timeout: 10s
+      api_version: v2
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  - job_name: kong
+    static_configs:
+      - targets:
+          - kong:8001
+    metrics_path: /metrics
+
+  - job_name: user-service
+    static_configs:
+      - targets:
+          - user-service:8001
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: product-service
+    static_configs:
+      - targets:
+          - product-service:8002
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: cart-service
+    static_configs:
+      - targets:
+          - cart-service:8003
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: order-service
+    static_configs:
+      - targets:
+          - order-service:8004
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: inventory-service
+    static_configs:
+      - targets:
+          - inventory-service:8005
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: payment-service
+    static_configs:
+      - targets:
+          - payment-service:8006
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: notification-service
+    static_configs:
+      - targets:
+          - notification-service:8007
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: recommendation-service
+    static_configs:
+      - targets:
+          - recommendation-service:8008
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  - job_name: ai-assistant-service
+    static_configs:
+      - targets:
+          - ai-assistant-service:8009
+    metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s

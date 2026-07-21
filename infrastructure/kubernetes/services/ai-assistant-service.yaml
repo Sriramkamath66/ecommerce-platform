@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-assistant-service
+  namespace: ai-ecommerce
+  labels:
+    app: ai-assistant-service
+    app.kubernetes.io/name: ai-assistant-service
+    app.kubernetes.io/part-of: ai-ecommerce-platform
+    app.kubernetes.io/version: latest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-assistant-service
+  template:
+    metadata:
+      labels:
+        app: ai-assistant-service
+        app.kubernetes.io/name: ai-assistant-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8009"
+    spec:
+      containers:
+        - name: ai-assistant-service
+          image: ghcr.io/REPO/ai-assistant-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8009
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8009
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8009
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-assistant-service
+  namespace: ai-ecommerce
+  labels:
+    app: ai-assistant-service
+    app.kubernetes.io/name: ai-assistant-service
+    app.kubernetes.io/part-of: ai-ecommerce-platform
+spec:
+  selector:
+    app: ai-assistant-service
+  ports:
+    - name: http
+      port: 8009
+      targetPort: 8009
+      protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,190 @@
+# Production overrides — merge with values.yaml via:
+# helm upgrade --install ai-ecommerce . -f values.yaml -f values-prod.yaml
+
+global:
+  image:
+    registry: ghcr.io
+    pullPolicy: Always
+
+services:
+  userService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  productService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  cartService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  orderService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  inventoryService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  paymentService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  notificationService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 65
+
+  recommendationService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "2000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 60
+
+  aiAssistantService:
+    replicaCount: 3
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "2000m"
+    autoscaling:
+      minReplicas: 3
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 60
+
+config:
+  appEnv: "production"
+  logLevel: "WARNING"
+
+postgresql:
+  primary:
+    persistence:
+      size: 100Gi
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      size: 100Gi
+
+redis:
+  master:
+    persistence:
+      size: 20Gi
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  replica:
+    replicaCount: 2
+
+qdrant:
+  replicaCount: 3
+  persistence:
+    size: 50Gi
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+monitoring:
+  prometheus:
+    retention: "30d"
+    storage:
+      size: 100Gi
+  grafana:
+    adminPassword: ""
+    persistence:
+      size: 10Gi

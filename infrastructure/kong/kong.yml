@@ -1,0 +1,336 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: user-service
+    url: http://user-service:8001
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: user-auth-public
+        paths:
+          - /api/v1/users/auth
+        methods:
+          - GET
+          - POST
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: false
+      - name: user-service-protected
+        paths:
+          - /api/v1/users
+        methods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: product-service
+    url: http://product-service:8002
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: product-service-public-read
+        paths:
+          - /api/v1/products
+        methods:
+          - GET
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: false
+      - name: product-categories-public
+        paths:
+          - /api/v1/categories
+        methods:
+          - GET
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: false
+      - name: product-service-protected
+        paths:
+          - /api/v1/products
+        methods:
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+      - name: product-categories-protected
+        paths:
+          - /api/v1/categories
+        methods:
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: cart-service
+    url: http://cart-service:8003
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: cart-service-routes
+        paths:
+          - /api/v1/cart
+        methods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: order-service
+    url: http://order-service:8004
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: order-service-routes
+        paths:
+          - /api/v1/orders
+        methods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: inventory-service
+    url: http://inventory-service:8005
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: inventory-service-routes
+        paths:
+          - /api/v1/inventory
+        methods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: payment-service
+    url: http://payment-service:8006
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: payment-service-routes
+        paths:
+          - /api/v1/payments
+        methods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: notification-service
+    url: http://notification-service:8007
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: notification-service-routes
+        paths:
+          - /api/v1/notifications
+        methods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: recommendation-service
+    url: http://recommendation-service:8008
+    connect_timeout: 60000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: recommendation-service-routes
+        paths:
+          - /api/v1/recommendations
+        methods:
+          - GET
+          - POST
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+        plugins:
+          - name: jwt
+            enabled: true
+            config:
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              secret_is_base64: false
+              run_on_preflight: false
+
+  - name: ai-assistant-service
+    url: http://ai-assistant-service:8009
+    connect_timeout: 120000
+    read_timeout: 120000
+    write_timeout: 120000
+    routes:
+      - name: ai-assistant-service-routes
+        paths:
+          - /api/v1/assistant
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: true
+        preserve_host: false
+
+plugins:
+  - name: rate-limiting
+    config:
+      minute: 1000
+      limit_by: ip
+      policy: local
+      hide_client_headers: false
+      fault_tolerant: true
+
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - Authorization
+        - X-Auth-Token
+        - X-Request-ID
+      exposed_headers:
+        - X-Auth-Token
+        - X-Request-ID
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  - name: request-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid#counter
+      echo_downstream: true

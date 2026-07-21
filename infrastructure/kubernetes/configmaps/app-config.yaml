@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ai-ecommerce
+  labels:
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/part-of: ai-ecommerce-platform
+data:
+  # Application environment
+  APP_ENV: "production"
+  LOG_LEVEL: "INFO"
+  DEBUG: "false"
+
+  # Redis
+  REDIS_URL: "redis://redis-master:6379/0"
+  REDIS_CACHE_TTL: "3600"
+
+  # Qdrant vector database
+  QDRANT_URL: "http://qdrant:6333"
+  QDRANT_COLLECTION_PRODUCTS: "products"
+  QDRANT_COLLECTION_USERS: "users"
+
+  # Service-to-service URLs (internal cluster DNS)
+  USER_SERVICE_URL: "http://user-service:8001"
+  PRODUCT_SERVICE_URL: "http://product-service:8002"
+  CART_SERVICE_URL: "http://cart-service:8003"
+  ORDER_SERVICE_URL: "http://order-service:8004"
+  INVENTORY_SERVICE_URL: "http://inventory-service:8005"
+  PAYMENT_SERVICE_URL: "http://payment-service:8006"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:8007"
+  RECOMMENDATION_SERVICE_URL: "http://recommendation-service:8008"
+  AI_ASSISTANT_SERVICE_URL: "http://ai-assistant-service:8009"
+
+  # Database connection pool settings
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "20"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+
+  # PostgreSQL connection settings (password injected via secret)
+  POSTGRES_HOST: "postgresql"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "postgres"
+  POSTGRES_USER_DB: "user_db"
+  POSTGRES_PRODUCT_DB: "product_db"
+  POSTGRES_ORDER_DB: "order_db"
+  POSTGRES_INVENTORY_DB: "inventory_db"
+  POSTGRES_PAYMENT_DB: "payment_db"
+
+  # SMTP / email settings
+  SMTP_HOST: "smtp.sendgrid.net"
+  SMTP_PORT: "587"
+  SMTP_TLS: "true"
+  SMTP_FROM_EMAIL: "noreply@ai-ecommerce.example.com"
+  SMTP_FROM_NAME: "AI E-Commerce"
+
+  # JWT settings (non-secret)
+  JWT_ALGORITHM: "RS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "30"
+
+  # CORS
+  CORS_ALLOW_ORIGINS: "https://app.ai-ecommerce.example.com"
+
+  # Pagination defaults
+  DEFAULT_PAGE_SIZE: "20"
+  MAX_PAGE_SIZE: "100"
+
+  # AI / recommendation settings
+  RECOMMENDATION_MODEL: "voyage-large-2"
+  EMBEDDING_DIMENSIONS: "1536"
+  AI_ASSISTANT_MAX_TOKENS: "4096"
+  AI_ASSISTANT_TEMPERATURE: "0.7"
+
+  # Stripe
+  STRIPE_WEBHOOK_ENDPOINT: "/webhook/stripe"
+  STRIPE_API_VERSION: "2023-10-16"
+
+  # Notification channels
+  NOTIFICATION_CHANNELS: "email,push"
+  PUSH_NOTIFICATION_PROVIDER: "firebase"

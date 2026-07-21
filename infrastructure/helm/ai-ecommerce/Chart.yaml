@@ -1,0 +1,24 @@
+apiVersion: v2
+name: ai-ecommerce
+description: AI-Powered E-Commerce Platform with 9 microservices, Kong API Gateway, PostgreSQL, Redis, Qdrant, and full observability stack.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - ecommerce
+  - ai
+  - microservices
+  - fastapi
+home: https://github.com/ai-ecommerce-platform
+maintainers:
+  - name: Platform Team
+    email: platform@ai-ecommerce.example.com
+dependencies:
+  - name: postgresql
+    version: "13.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled

@@ -1,0 +1,292 @@
+global:
+  image:
+    registry: ghcr.io
+    pullPolicy: IfNotPresent
+    tag: latest
+  namespace: ai-ecommerce
+  imagePullSecrets: []
+
+services:
+  userService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/user-service
+      tag: ""
+    port: 8001
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  productService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/product-service
+      tag: ""
+    port: 8002
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  cartService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/cart-service
+      tag: ""
+    port: 8003
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  orderService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/order-service
+      tag: ""
+    port: 8004
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  inventoryService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/inventory-service
+      tag: ""
+    port: 8005
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  paymentService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/payment-service
+      tag: ""
+    port: 8006
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  notificationService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/notification-service
+      tag: ""
+    port: 8007
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  recommendationService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/recommendation-service
+      tag: ""
+    port: 8008
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+  aiAssistantService:
+    enabled: true
+    replicaCount: 2
+    image:
+      repository: REPO/ai-assistant-service
+      tag: ""
+    port: 8009
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+
+# Application configuration (non-secret)
+config:
+  appEnv: "production"
+  logLevel: "INFO"
+  redisUrl: "redis://redis-master:6379/0"
+  qdrantUrl: "http://qdrant:6333"
+  postgresHost: "postgresql"
+  postgresPort: "5432"
+  postgresUser: "postgres"
+  smtpHost: "smtp.sendgrid.net"
+  smtpPort: "587"
+  smtpFromEmail: "noreply@ai-ecommerce.example.com"
+  jwtAlgorithm: "RS256"
+  jwtAccessTokenExpireMinutes: "60"
+
+# Secrets (override with --set or external secrets manager)
+secrets:
+  postgresPassword: "changeme"
+  anthropicApiKey: ""
+  voyageApiKey: ""
+  jwtPrivateKey: ""
+  jwtPublicKey: ""
+  stripeSecretKey: ""
+  smtpUsername: ""
+  smtpPassword: ""
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: changeme
+    database: postgres
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+qdrant:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: qdrant/qdrant
+    tag: latest
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+kong:
+  enabled: true
+  ingressController:
+    enabled: false
+  dblessConfig:
+    configMap: kong-config
+  proxy:
+    http:
+      enabled: true
+      servicePort: 8000
+    tls:
+      enabled: false
+
+monitoring:
+  prometheus:
+    enabled: true
+    retention: "15d"
+    storage:
+      size: 20Gi
+  grafana:
+    enabled: true
+    adminPassword: admin
+    persistence:
+      enabled: true
+      size: 5Gi
+  alertmanager:
+    enabled: true
