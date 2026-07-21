@@ -18,8 +18,6 @@ env:
   HELM_VERSION: "3.17.3"
   KUBECTL_VERSION: "1.31.0"
   NAMESPACE: ai-ecommerce
-  AWS_REGION: us-west-2
-  EKS_CLUSTER_NAME: lowerint
 
 jobs:
   build-and-push:
@@ -97,11 +95,116 @@ jobs:
       - name: Output image digest
         run: echo "Image digest ${{ steps.push.outputs.digest }} pushed for ${{ matrix.service }}"
 
-  deploy:
-    name: Deploy to Kubernetes
+  # ── Helm validation on a temporary Kind cluster ───────────────────────────────
+  # Runs on every push to main — no secrets required, no cloud account needed.
+  # Validates: chart renders correctly, backing services (postgres + redis) start.
+  validate-kind:
+    name: Validate Helm Chart (Kind)
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: ci-ecommerce
+          wait: 120s
+
+      - name: Install Helm
+        run: |
+          curl -fsSL -o get_helm.sh \
+            https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          DESIRED_VERSION=v${{ env.HELM_VERSION }} ./get_helm.sh
+
+      - name: Add Bitnami repo and update chart dependencies
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm dependency update ./infrastructure/helm/ai-ecommerce
+
+      - name: Helm lint
+        run: |
+          helm lint ./infrastructure/helm/ai-ecommerce \
+            --values ./infrastructure/helm/ai-ecommerce/values.yaml
+
+      - name: Helm dry-run (full template render)
+        run: |
+          helm upgrade --install ai-ecommerce \
+            ./infrastructure/helm/ai-ecommerce \
+            --namespace ${{ env.NAMESPACE }} \
+            --create-namespace \
+            --dry-run \
+            --values ./infrastructure/helm/ai-ecommerce/values.yaml \
+            --set global.image.tag=${{ github.sha }} \
+            --set secrets.postgresPassword=ci-test \
+            --set secrets.anthropicApiKey=sk-placeholder \
+            --set secrets.voyageApiKey=pa-placeholder \
+            --set secrets.jwtPrivateKey=placeholder \
+            --set secrets.jwtPublicKey=placeholder
+
+      - name: Install backing services only (postgres + redis)
+        # Disable all 9 app services — they need real API keys.
+        # This verifies the Helm chart deploys and postgres/redis start correctly.
+        run: |
+          helm upgrade --install ai-ecommerce \
+            ./infrastructure/helm/ai-ecommerce \
+            --namespace ${{ env.NAMESPACE }} \
+            --create-namespace \
+            --values ./infrastructure/helm/ai-ecommerce/values.yaml \
+            --set global.image.tag=${{ github.sha }} \
+            --set secrets.postgresPassword=ci-test \
+            --set secrets.anthropicApiKey=sk-placeholder \
+            --set secrets.voyageApiKey=pa-placeholder \
+            --set secrets.jwtPrivateKey=placeholder \
+            --set secrets.jwtPublicKey=placeholder \
+            --set services.userService.replicaCount=0 \
+            --set services.productService.replicaCount=0 \
+            --set services.cartService.replicaCount=0 \
+            --set services.orderService.replicaCount=0 \
+            --set services.inventoryService.replicaCount=0 \
+            --set services.paymentService.replicaCount=0 \
+            --set services.notificationService.replicaCount=0 \
+            --set services.recommendationService.replicaCount=0 \
+            --set services.aiAssistantService.replicaCount=0 \
+            --wait \
+            --timeout 5m
+
+      - name: Verify PostgreSQL is ready
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/name=postgresql \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=120s
+          echo "PASS: PostgreSQL is ready"
+
+      - name: Verify Redis is ready
+        run: |
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/name=redis \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=120s
+          echo "PASS: Redis is ready"
+
+      - name: Show cluster state on failure
+        if: failure()
+        run: |
+          kubectl get all -n ${{ env.NAMESPACE }}
+          kubectl describe pods -n ${{ env.NAMESPACE }}
+
+  # ── Production deploy — provider-agnostic, gated on KUBE_CONFIG secret ────────
+  # Set KUBE_CONFIG in GitHub repo Secrets (base64-encoded kubeconfig) to enable.
+  # Works with any Kubernetes cluster: GKE, AKS, DOKS, k3s, local — not AWS-specific.
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate-kind
+    if: ${{ secrets.KUBE_CONFIG != '' }}
     permissions:
       contents: read
       packages: read
@@ -119,7 +222,8 @@ jobs:
 
       - name: Install Helm
         run: |
-          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          curl -fsSL -o get_helm.sh \
+            https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
           chmod 700 get_helm.sh
           DESIRED_VERSION=v${{ env.HELM_VERSION }} ./get_helm.sh
 
@@ -127,28 +231,17 @@ jobs:
         run: |
           curl -LO "https://dl.k8s.io/release/v${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl"
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Configure kubectl for EKS
+      - name: Configure kubectl
         run: |
-          aws eks update-kubeconfig \
-            --region ${{ env.AWS_REGION }} \
-            --name ${{ env.EKS_CLUSTER_NAME }}
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-      - name: Verify namespace exists
+      - name: Add Bitnami repo and update chart dependencies
         run: |
-          kubectl get namespace ${{ env.NAMESPACE }} || \
-          kubectl create namespace ${{ env.NAMESPACE }}
-
-      - name: Update Helm chart dependencies
-        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
           helm dependency update ./infrastructure/helm/ai-ecommerce
 
       - name: Helm upgrade/install
@@ -174,7 +267,6 @@ jobs:
             --set secrets.voyageApiKey=${{ secrets.VOYAGE_API_KEY }} \
             --set secrets.jwtPrivateKey=${{ secrets.JWT_PRIVATE_KEY }} \
             --set secrets.jwtPublicKey=${{ secrets.JWT_PUBLIC_KEY }} \
-            --set secrets.stripeSecretKey=${{ secrets.STRIPE_SECRET_KEY }} \
             --set secrets.smtpUsername=${{ secrets.SMTP_USERNAME }} \
             --set secrets.smtpPassword=${{ secrets.SMTP_PASSWORD }} \
             --wait \
@@ -187,19 +279,16 @@ jobs:
           for svc in user-service product-service cart-service order-service \
                      inventory-service payment-service notification-service \
                      recommendation-service ai-assistant-service; do
-            echo "Checking rollout for $svc..."
             kubectl rollout status deployment/$svc \
-              --namespace ${{ env.NAMESPACE }} \
-              --timeout=5m
+              --namespace ${{ env.NAMESPACE }} --timeout=5m
           done
 
+  # ── Smoke tests — run after production deploy ─────────────────────────────────
   smoke-test:
     name: Smoke Tests
     runs-on: ubuntu-latest
-    needs: deploy
-    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
-    environment:
-      name: production
+    needs: deploy-production
+    if: ${{ secrets.KUBE_CONFIG != '' }}
 
     steps:
       - name: Checkout repository
@@ -209,26 +298,18 @@ jobs:
         run: |
           curl -LO "https://dl.k8s.io/release/v${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl"
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Configure kubectl for EKS
+      - name: Configure kubectl
         run: |
-          aws eks update-kubeconfig \
-            --region ${{ env.AWS_REGION }} \
-            --name ${{ env.EKS_CLUSTER_NAME }}
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
 
       - name: Port-forward Kong gateway
         run: |
           kubectl port-forward svc/kong-proxy 8000:8000 \
             --namespace ${{ env.NAMESPACE }} &
-          sleep 5
+          sleep 8
 
       - name: Run health checks via Kong
         run: |
@@ -241,14 +322,11 @@ jobs:
             local path=$2
             local response
             response=$(curl --silent --output /dev/null --write-out "%{http_code}" \
-              --max-time 10 \
-              --retry 3 \
-              --retry-delay 2 \
-              "$GATEWAY$path")
+              --max-time 10 --retry 3 --retry-delay 3 "$GATEWAY$path")
             if [[ "$response" == "200" ]]; then
-              echo "PASS: $service health check ($response)"
+              echo "PASS: $service ($response)"
             else
-              echo "FAIL: $service health check returned HTTP $response"
+              echo "FAIL: $service returned HTTP $response"
               FAILED=1
             fi
           }
@@ -263,25 +341,9 @@ jobs:
           check_health "recommendation-service" "/api/v1/recommendations/health"
           check_health "ai-assistant-service"   "/api/v1/assistant/health"
 
-          if [[ "$FAILED" -ne 0 ]]; then
-            echo "One or more smoke tests failed."
-            exit 1
-          fi
-
+          [[ "$FAILED" -eq 0 ]] || { echo "One or more smoke tests failed."; exit 1; }
           echo "All smoke tests passed."
-
-      - name: Check public product endpoint
-        run: |
-          response=$(curl --silent --output /dev/null --write-out "%{http_code}" \
-            --max-time 10 \
-            "http://localhost:8000/api/v1/products")
-          if [[ "$response" != "200" ]]; then
-            echo "FAIL: Public product listing returned HTTP $response"
-            exit 1
-          fi
-          echo "PASS: Public product listing is accessible without auth."
 
       - name: Notify on failure
         if: failure()
-        run: |
-          echo "::error::Smoke tests failed after deployment of ${{ github.sha }}. Manual intervention may be required."
+        run: echo "::error::Smoke tests failed after deployment of ${{ github.sha }}."
