@@ -160,10 +160,9 @@ jobs:
           echo "PASS: chart renders without errors"
 
       - name: Install backing services only (postgres + redis)
-        # All 9 app services are disabled (replicaCount=0) — no API keys needed.
-        # This confirms the Helm chart is deployable and backing services start.
-        # --create-namespace here is safe: namespace doesn't exist yet so Helm
-        # creates it with the correct ownership labels on the first (and only) call.
+        # All 9 app services are at replicaCount=0 — only postgres + redis deploy.
+        # persistence.enabled=false uses emptyDir instead of PVCs: no storage
+        # provisioner needed and pods start in seconds instead of minutes in Kind.
         run: |
           helm upgrade --install ai-ecommerce \
             ./infrastructure/helm/ai-ecommerce \
@@ -185,8 +184,19 @@ jobs:
             --set services.notificationService.replicaCount=0 \
             --set services.recommendationService.replicaCount=0 \
             --set services.aiAssistantService.replicaCount=0 \
+            --set postgresql.primary.persistence.enabled=false \
+            --set redis.master.persistence.enabled=false \
+            --set redis.replica.persistence.enabled=false \
             --wait \
-            --timeout 5m
+            --timeout 5m &
+          HELM_PID=$!
+          # Stream pod status every 15 s while helm is waiting
+          while kill -0 $HELM_PID 2>/dev/null; do
+            echo "--- pod status ---"
+            kubectl get pods -n ${{ env.NAMESPACE }} 2>/dev/null || true
+            sleep 15
+          done
+          wait $HELM_PID
 
       - name: Verify PostgreSQL is ready
         run: |
