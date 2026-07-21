@@ -47,6 +47,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set lowercase image owner
+        id: owner
+        # ghcr.io requires the entire image reference to be lowercase.
+        # github.repository_owner may contain uppercase letters (e.g. Sriramkamath66).
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -61,7 +67,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.service }}
           tags: |
             type=sha,prefix=,format=long
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
@@ -74,8 +80,8 @@ jobs:
           context: ./services/${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.value }}/${{ matrix.service }}:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
@@ -103,6 +109,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set lowercase image owner
+        id: owner
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -139,15 +149,15 @@ jobs:
             --values ./infrastructure/helm/ai-ecommerce/values.yaml \
             --set global.image.tag=${{ github.sha }} \
             --set global.image.registry=${{ env.REGISTRY }} \
-            --set services.userService.image.repository=${{ github.repository_owner }}/user-service \
-            --set services.productService.image.repository=${{ github.repository_owner }}/product-service \
-            --set services.cartService.image.repository=${{ github.repository_owner }}/cart-service \
-            --set services.orderService.image.repository=${{ github.repository_owner }}/order-service \
-            --set services.inventoryService.image.repository=${{ github.repository_owner }}/inventory-service \
-            --set services.paymentService.image.repository=${{ github.repository_owner }}/payment-service \
-            --set services.notificationService.image.repository=${{ github.repository_owner }}/notification-service \
-            --set services.recommendationService.image.repository=${{ github.repository_owner }}/recommendation-service \
-            --set services.aiAssistantService.image.repository=${{ github.repository_owner }}/ai-assistant-service \
+            --set services.userService.image.repository=${{ steps.owner.outputs.value }}/user-service \
+            --set services.productService.image.repository=${{ steps.owner.outputs.value }}/product-service \
+            --set services.cartService.image.repository=${{ steps.owner.outputs.value }}/cart-service \
+            --set services.orderService.image.repository=${{ steps.owner.outputs.value }}/order-service \
+            --set services.inventoryService.image.repository=${{ steps.owner.outputs.value }}/inventory-service \
+            --set services.paymentService.image.repository=${{ steps.owner.outputs.value }}/payment-service \
+            --set services.notificationService.image.repository=${{ steps.owner.outputs.value }}/notification-service \
+            --set services.recommendationService.image.repository=${{ steps.owner.outputs.value }}/recommendation-service \
+            --set services.aiAssistantService.image.repository=${{ steps.owner.outputs.value }}/ai-assistant-service \
             --set secrets.postgresPassword=${{ secrets.POSTGRES_PASSWORD }} \
             --set secrets.anthropicApiKey=${{ secrets.ANTHROPIC_API_KEY }} \
             --set secrets.voyageApiKey=${{ secrets.VOYAGE_API_KEY }} \
