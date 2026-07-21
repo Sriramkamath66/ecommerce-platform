@@ -1,4 +1,4 @@
-name: CD — Build, Push & Deploy
+name: CD - Build, Push, and Deploy
 
 on:
   push:
@@ -8,6 +8,15 @@ on:
       - "services/**"
       - "infrastructure/**"
       - ".github/workflows/cd.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: false
+        default: "production"
+        type: choice
+        options:
+          - production
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,8 +29,9 @@ env:
   NAMESPACE: ai-ecommerce
 
 jobs:
+  # ── Build and push all 9 service images to GHCR ──────────────────────────────
   build-and-push:
-    name: Build & Push — ${{ matrix.service }}
+    name: Build & Push - ${{ matrix.service }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -40,9 +50,6 @@ jobs:
           - recommendation-service
           - ai-assistant-service
 
-    outputs:
-      image-digest: ${{ steps.push.outputs.digest }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,6 +58,7 @@ jobs:
         id: owner
         # ghcr.io requires the entire image reference to be lowercase.
         # github.repository_owner may contain uppercase letters (e.g. Sriramkamath66).
+        shell: bash
         run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
@@ -95,13 +103,13 @@ jobs:
       - name: Output image digest
         run: echo "Image digest ${{ steps.push.outputs.digest }} pushed for ${{ matrix.service }}"
 
-  # ── Helm validation on a temporary Kind cluster ───────────────────────────────
-  # Runs on every push to main — no secrets required, no cloud account needed.
-  # Validates: chart renders correctly, backing services (postgres + redis) start.
+  # ── Helm chart validation on a temporary Kind cluster ────────────────────────
+  # Runs in parallel with build-and-push — no image pull needed (replicaCount=0).
+  # Validates: chart renders correctly, postgres + redis backing services start.
+  # No secrets or cloud credentials required.
   validate-kind:
     name: Validate Helm Chart (Kind)
     runs-on: ubuntu-latest
-    needs: build-and-push
     permissions:
       contents: read
 
@@ -116,6 +124,7 @@ jobs:
           wait: 120s
 
       - name: Install Helm
+        shell: bash
         run: |
           curl -fsSL -o get_helm.sh \
             https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
@@ -149,8 +158,8 @@ jobs:
             --set secrets.jwtPublicKey=placeholder
 
       - name: Install backing services only (postgres + redis)
-        # Disable all 9 app services — they need real API keys.
-        # This verifies the Helm chart deploys and postgres/redis start correctly.
+        # All 9 app services are disabled (replicaCount=0) — no API keys needed.
+        # This confirms the Helm chart is deployable and backing services start.
         run: |
           helm upgrade --install ai-ecommerce \
             ./infrastructure/helm/ai-ecommerce \
@@ -199,11 +208,13 @@ jobs:
 
   # ── Production deploy — provider-agnostic, gated on KUBE_CONFIG secret ────────
   # Set KUBE_CONFIG in GitHub repo Secrets (base64-encoded kubeconfig) to enable.
-  # Works with any Kubernetes cluster: GKE, AKS, DOKS, k3s, local — not AWS-specific.
+  # Works with any Kubernetes cluster: GKE, AKS, DOKS, k3s — no AWS needed.
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: validate-kind
+    needs:
+      - build-and-push
+      - validate-kind
     if: ${{ secrets.KUBE_CONFIG != '' }}
     permissions:
       contents: read
@@ -218,9 +229,11 @@ jobs:
 
       - name: Set lowercase image owner
         id: owner
+        shell: bash
         run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Install Helm
+        shell: bash
         run: |
           curl -fsSL -o get_helm.sh \
             https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
